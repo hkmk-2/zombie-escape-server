@@ -8,6 +8,9 @@ var ROOT = path.join(__dirname, '..');
 var DATA = require(path.join(ROOT, 'data', 'data.js'));
 var Sim = require(path.join(ROOT, 'src', 'sim.js'));
 var N = DATA.config.net;
+var CH = DATA.config.character;
+var ABILITIES = DATA.config.abilities;
+var FACE_PREFIX = 'data:image/jpeg;base64,'; // 設計図11節：face は JPEG の data URL か null
 
 var rooms = new Map();
 
@@ -29,8 +32,35 @@ function cleanName(raw, no) {
   return s || N.defaultName.replace('{n}', no);
 }
 
+// キャラクターを選んだ後は char.name、選ぶ前はつないだ時の名前
+function nameOf(c) { return c.char ? c.char.name : c.name; }
+
+function pickId(v, list) { return list.some(function (x) { return x.id === v; }) ? v : list[0].id; }
+function clampRange(v, r, max) {
+  if (typeof v !== 'number' || !isFinite(v)) v = r.default;
+  v = r.min + Math.round((v - r.min) / r.step) * r.step;
+  return Math.max(r.min, Math.min(max, v));
+}
+
+// 外から来た char を config の範囲に切る。知らない項目は捨てる。face は別に返す
+function cleanChar(raw, c) {
+  var body = pickId(raw.body, CH.bodies);
+  var bodyDef = CH.bodies.filter(function (b) { return b.id === body; })[0];
+  var name = Array.from(String(typeof raw.name === 'string' ? raw.name : '').trim()).slice(0, CH.nameMaxLen).join('');
+  var face = raw.face;
+  var faceOk = typeof face === 'string' && face.length <= CH.faceMaxBytes && face.indexOf(FACE_PREFIX) === 0 &&
+    /^[A-Za-z0-9+/=]*$/.test(face.slice(FACE_PREFIX.length));
+  return {
+    char: { name: name || c.name, body: body, hair: pickId(raw.hair, CH.looks.hair), shirt: pickId(raw.shirt, CH.looks.shirt),
+      hp: clampRange(raw.hp, CH.hp, CH.hp.max),
+      carry: clampRange(raw.carry, CH.carry, Math.min(CH.carry.max, bodyDef.carryMax || CH.carry.max)),
+      ability: pickId(raw.ability, ABILITIES) },
+    face: faceOk ? face : null
+  };
+}
+
 function sendRoom(room) {
-  var players = room.clients.map(function (c) { return { id: c.id, name: c.name }; });
+  var players = room.clients.map(function (c) { return { id: c.id, name: nameOf(c), ready: c.ready, char: c.char }; });
   room.clients.forEach(function (c) {
     send(c, { t: 'room', room: room.id, you: c.id, host: room.hostId, status: room.status, players: players });
   });
@@ -38,12 +68,14 @@ function sendRoom(room) {
 
 function startGame(room) {
   var seed = crypto.randomInt(0x100000000);
-  var players = room.clients.map(function (c, i) { return { id: c.id, name: c.name, color: N.colors[i % N.colors.length] }; });
+  var players = room.clients.map(function (c, i) {
+    return Object.assign({}, c.char, { id: c.id, name: nameOf(c), color: N.colors[i % N.colors.length] });
+  });
   room.game = Sim.createGame(DATA, { seed: seed, players: players });
   room.status = 'playing';
   room.events = [];
   room.ticks = 0;
-  room.clients.forEach(function (c) { c.input = { mx: 0, my: 0, interact: false, attack: false }; send(c, { t: 'start', seed: seed, players: players }); });
+  room.clients.forEach(function (c) { c.input = { mx: 0, my: 0, interact: false, attack: false, ability: false }; send(c, { t: 'start', seed: seed, players: players }); });
   sendRoom(room);
   sendSnapshot(room);
 }
@@ -51,7 +83,7 @@ function startGame(room) {
 function sendSnapshot(room) {
   var g = room.game, k = g.key;
   var p = g.players.map(function (q) {
-    return [q.id, q.floor, roundN(q.x), roundN(q.y), roundN(q.facing), roundN(q.hp), q.hasKey, q.alive, q.escaped, roundN(q.attackT), roundN(q.hurtT)];
+    return [q.id, q.floor, roundN(q.x), roundN(q.y), roundN(q.facing), roundN(q.hp), q.hasKey, q.alive, q.escaped, roundN(q.attackT), roundN(q.hurtT), roundN(q.abilityT), roundN(q.abilityCd)];
   });
   var byId = {};
   g.players.forEach(function (q) { byId[q.id] = q; });
@@ -68,9 +100,10 @@ function sendSnapshot(room) {
 function tickRoom(room) {
   var inputs = {};
   room.clients.forEach(function (c) {
-    inputs[c.id] = { mx: c.input.mx, my: c.input.my, interact: c.input.interact, attack: c.input.attack };
+    inputs[c.id] = { mx: c.input.mx, my: c.input.my, interact: c.input.interact, attack: c.input.attack, ability: c.input.ability };
     c.input.interact = false;
     c.input.attack = false;
+    c.input.ability = false;
   });
   Sim.step(room.game, inputs, 1 / N.stepHz);
   Array.prototype.push.apply(room.events, room.game.events);
@@ -78,6 +111,9 @@ function tickRoom(room) {
   if (room.game.status !== 'playing') {
     sendSnapshot(room);
     room.status = 'ended';
+    sendRoom(room);
+    room.clients.forEach(function (c) { c.ready = false; });
+    room.status = 'waiting';
     sendRoom(room);
   } else if (room.ticks % Math.round(N.stepHz / N.snapshotHz) === 0) sendSnapshot(room);
 }
@@ -98,17 +134,33 @@ function onMessage(room, c, buf) {
   var now = Date.now();
   if (now - c.winStart >= 1000) { c.winStart = now; c.count = 0; }
   if (++c.count > N.maxMsgPerSec) { c.ws.close(1008); return; }
-  if (buf.length > N.maxMsgBytes) return;
+  if (buf.length > N.maxCharBytes) return;
   var m;
   try { m = JSON.parse(buf.toString('utf8')); } catch (err) { return; }
   if (!m || typeof m !== 'object') return;
+  if (m.t !== 'char' && buf.length > N.maxMsgBytes) return;
   if (m.t === 'in') {
     c.input.mx = clampAxis(m.mx);
     c.input.my = clampAxis(m.my);
     if (m.interact === true) c.input.interact = true;
     if (m.attack === true) c.input.attack = true;
+    if (m.ability === true) c.input.ability = true;
+  } else if (m.t === 'char') {
+    if (room.status === 'playing' || !m.char || typeof m.char !== 'object') return;
+    var r = cleanChar(m.char, c);
+    c.char = r.char;
+    sendRoom(room);
+    if (r.face !== c.face) {
+      c.face = r.face;
+      room.clients.forEach(function (o) { send(o, { t: 'face', id: c.id, face: c.face }); });
+    }
+  } else if (m.t === 'ready') {
+    if (room.status === 'playing') return;
+    c.ready = m.ready === true;
+    sendRoom(room);
   } else if (m.t === 'start') {
-    if (c.id === room.hostId && (room.status === 'waiting' || room.status === 'ended')) startGame(room);
+    var allReady = room.clients.every(function (o) { return o.char && o.ready; });
+    if (c.id === room.hostId && (room.status === 'waiting' || room.status === 'ended') && allReady) startGame(room);
   }
 }
 
@@ -137,7 +189,7 @@ function onConnection(ws, req) {
   }
   room.seq++;
   var c = { id: 'p' + room.seq, name: cleanName(q.get('name'), room.seq), ws: ws, winStart: Date.now(), count: 0,
-    input: { mx: 0, my: 0, interact: false, attack: false } };
+    input: { mx: 0, my: 0, interact: false, attack: false, ability: false }, char: null, face: null, ready: false };
   room.clients.push(c);
   if (!room.hostId) room.hostId = c.id;
   ws.on('message', function (buf) {
@@ -145,6 +197,7 @@ function onConnection(ws, req) {
   });
   ws.on('close', function () { onLeave(room, c); });
   sendRoom(room);
+  room.clients.forEach(function (o) { if (o !== c && o.face) send(c, { t: 'face', id: o.id, face: o.face }); });
 }
 
 function serveFile(req, res) {
@@ -168,7 +221,7 @@ function start(port) {
     if (req.method === 'GET' && req.url === N.healthPath) { res.writeHead(200); return res.end('ok'); }
     serveFile(req, res);
   });
-  var wss = new WebSocketServer({ server: server, path: N.wsPath, maxPayload: N.maxMsgBytes });
+  var wss = new WebSocketServer({ server: server, path: N.wsPath, maxPayload: Math.max(N.maxMsgBytes, N.maxCharBytes) });
   wss.on('connection', onConnection);
   var timer = setInterval(tickAll, 1000 / N.stepHz);
   server.on('close', function () { clearInterval(timer); wss.clients.forEach(function (ws) { ws.terminate(); }); });

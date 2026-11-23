@@ -264,9 +264,14 @@ var Sim = (function () {
     });
     var start = pick(game, far.length ? far : aisles), sc = cellCenter(floors[start.floor], start.i);
 
+    var C = config.character;
     (opts && opts.players || []).forEach(function (p) {
+      var hp = p.hp != null ? p.hp : C.hp.default;
       game.players.push({ id: p.id, name: p.name, color: p.color, floor: start.floor, x: sc.x, y: sc.y, r: P.radiusM,
-        hp: P.hp, maxHp: P.hp, hasKey: false, facing: 0, attackT: 0, hurtT: 0, alive: true, escaped: false });
+        hp: hp, maxHp: hp, hasKey: false, facing: 0, attackT: 0, hurtT: 0, alive: true, escaped: false,
+        body: p.body || C.bodies[0].id, hair: p.hair || C.looks.hair[0].id, shirt: p.shirt || C.looks.shirt[0].id,
+        carry: p.carry != null ? p.carry : C.carry.default, ability: p.ability || config.abilities[0].id,
+        abilityT: 0, abilityCd: 0 });
     });
 
     // 鍵：section のうちスタート地点から歩いて届くマス
@@ -475,9 +480,14 @@ var Sim = (function () {
     activePlayers(game).forEach(function (p) {
       var inp = (inputs && inputs[p.id]) || {}, f = game.floors[p.floor];
       p.attackT = Math.max(0, p.attackT - dt); p.hurtT = Math.max(0, p.hurtT - dt);
+      p.abilityT = Math.max(0, p.abilityT - dt); p.abilityCd = Math.max(0, p.abilityCd - dt);
+      var ab = game.config.abilities.filter(function (a) { return a.id === p.ability; })[0];
+      var isSpeed = ab && ab.type === 'speed';
+      if (inp.ability && isSpeed && p.abilityCd <= 0) { p.abilityT = ab.sec; p.abilityCd = ab.cooldownSec; }
+      var sp = isSpeed && p.abilityT > 0 ? speed * ab.mult : speed;
       var mx = +inp.mx || 0, my = +inp.my || 0, len = Math.hypot(mx, my);
       if (len > 1) { mx /= len; my /= len; }
-      if (len > 0.01) { p.facing = Math.atan2(my, mx); moveCircle(f, p, mx * speed * dt, my * speed * dt); }
+      if (len > 0.01) { p.facing = Math.atan2(my, mx); moveCircle(f, p, mx * sp * dt, my * sp * dt); }
       if (inp.interact) interact(game, p);
       if (inp.attack && p.attackT <= 0 && !p.escaped) attack(game, p);
     });

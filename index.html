@@ -4,18 +4,62 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ゾンビ脱出（仮）</title>
-<style>
-  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #14110f; }
-  body { display: flex; align-items: center; justify-content: center; }
-  canvas { display: block; touch-action: none; image-rendering: pixelated; }
-</style>
+<link rel="stylesheet" href="src/ui.css">
 </head>
 <body>
+<!-- 図1 トップ -->
+<section id="top" class="scr" hidden>
+  <h1>ゾンビ脱出（仮）</h1>
+  <div class="sub">鍵を見つけて、エレベーターから脱出する</div>
+  <div class="row"><button class="btn go">ゲームを始める</button><button class="btn o chars">キャラクター</button></div>
+  <div class="note"></div>
+</section>
+<!-- 図2 キャラクターの一覧 -->
+<section id="list" class="scr" hidden>
+  <div class="bar"><button class="btn s o back">戻る</button><h2 class="ttl">キャラクター</h2><span class="st count"></span><span class="gap"></span><button class="btn s add">新規作成</button></div>
+  <div class="page"><div class="cards"></div></div>
+</section>
+<!-- 図3 キャラクターの作成 -->
+<section id="edit" class="scr" hidden>
+  <div class="bar"><button class="btn s o back">戻る</button><h2 class="ttl">キャラクターの作成</h2><span class="gap"></span><button class="btn s save">保存</button></div>
+  <div class="page edit">
+    <div class="panel left">
+      <span class="face big"></span>
+      <div class="btns"><button class="btn s o pick">画像を選ぶ</button><button class="btn s o drop">外す</button></div>
+      <input class="file" type="file" accept="image/*" hidden>
+      <span class="lab">ゲームの中の見た目</span>
+      <canvas class="px dot" width="96" height="120"></canvas>
+    </div>
+    <div class="panel right">
+      <label class="fld"><span class="lab f-name"></span><input class="inp name" type="text"></label>
+      <label class="fld"><span class="lab">種類</span><select class="inp body"></select></label>
+      <div class="fld"><span class="lab">髪・毛の色</span><div class="sws hair"></div></div>
+      <div class="fld"><span class="lab">服の色</span><div class="sws shirt"></div></div>
+      <label class="fld"><span class="lab f-hp"></span><input class="inp hp" type="number"></label>
+      <label class="fld"><span class="lab f-carry"></span><input class="inp carry" type="number"></label>
+      <label class="fld"><span class="lab">特殊能力</span><select class="inp ability"></select></label>
+      <div class="fld"><span class="lab">能力の説明</span><div class="desc"></div></div>
+      <div class="err" role="alert"></div>
+    </div>
+  </div>
+</section>
+<!-- 図4 待機の部屋 -->
+<section id="wait" class="scr" hidden>
+  <div class="bar"><button class="btn s o back">戻る</button><h2 class="ttl">待機の部屋</h2><span class="lab">招待の URL</span><input class="inp url" type="text" readonly><button class="btn s o copy">コピー</button></div>
+  <div class="page wait">
+    <div class="panel"><div class="nm head">キャラクターを選ぶ</div><div class="pick"></div></div>
+    <div class="panel"><div class="nm head count"></div><div class="who"></div></div>
+  </div>
+  <div class="bar foot"><span class="st msg"></span><button class="btn o ready">準備完了</button><button class="btn start">始める</button></div>
+</section>
 <canvas id="game"></canvas>
 <script src="data/data.js"></script>
 <script src="src/sim.js"></script>
+<script src="src/chars.js"></script>
+<script src="src/net.js"></script>
 <script src="src/input.js"></script>
 <script src="src/render.js"></script>
 <script src="src/main.js"></script>
+<script src="src/screens.js"></script>
 </body>
 </html>

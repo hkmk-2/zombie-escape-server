@@ -1,13 +1,15 @@
-// キー入力。WASD・矢印で mx,my。E と スペースは押した瞬間の1回だけ true。
+// キー入力。WASD・矢印で mx,my。E・スペース・能力のキー（config.abilityKey）は押した瞬間の1回だけ true。
 (function () {
-  var down = {}, interact = false, attack = false;
+  var down = {}, interact = false, attack = false, ability = false;
   var MOVE = { KeyW: 1, KeyA: 1, KeyS: 1, KeyD: 1, ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1, Space: 1 };
 
   window.addEventListener('keydown', function (e) {
+    if (!on) return; // プレイの画面の時だけ（入力欄の文字を止めない）
     if (MOVE[e.code]) e.preventDefault(); // 矢印とスペースでページを動かさない
     if (!e.repeat) {
       if (e.code === 'KeyE') interact = true;
       if (e.code === 'Space') attack = true;
+      if (e.code === window.GAME_DATA.config.abilityKey) ability = true;
     }
     down[e.code] = true;
   });
@@ -23,10 +25,11 @@
     var mx = axis(['KeyA', 'ArrowLeft'], ['KeyD', 'ArrowRight']);
     var my = axis(['KeyW', 'ArrowUp'], ['KeyS', 'ArrowDown']);
     var l = Math.hypot(mx, my) || 1;
-    var out = { mx: mx / l, my: my / l, interact: interact, attack: attack };
-    interact = attack = false;
+    var out = { mx: mx / l, my: my / l, interact: interact, attack: attack, ability: ability };
+    interact = attack = ability = false;
     return out;
   }
 
-  window.Input = { read: read, clear: function () { interact = attack = false; } };
+  var on = false;
+  window.Input = { read: read, clear: function () { interact = attack = ability = false; }, enable: function (v) { on = v; if (!v) down = {}; } };
 })();

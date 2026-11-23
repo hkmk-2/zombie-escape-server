@@ -38,25 +38,48 @@
   // 読みこみの時に1回だけ、全部の絵を小さいキャンバスにし、「名前.数字」の種類の数を数える
   function sprites() {
     if (SP) return SP;
-    var S = window.GAME_DATA.sprites, img = {}, n = {};
+    var S = window.GAME_DATA.sprites, img = {}, n = {}, rows = {};
     Object.keys(S.sprites).forEach(function (name) {
-      var rows = resolve(S, name, []), w = rows[0].length, h = rows.length, c = newCanvas(w, h);
-      var cx = c.getContext('2d'), id = cx.createImageData(w, h);
-      rows.forEach(function (r, y) {
-        for (var x = 0; x < w; x++) {
-          var hex = S.palette[r[x]];
-          if (!hex) continue;
-          var v = parseInt(hex.slice(1), 16), o = (y * w + x) * 4;
-          id.data[o] = v >> 16; id.data[o + 1] = (v >> 8) & 255; id.data[o + 2] = v & 255; id.data[o + 3] = 255;
-        }
-      });
-      cx.putImageData(id, 0, 0);
-      img[name] = c;
+      rows[name] = resolve(S, name, []);
+      img[name] = paint(rows[name], S.palette, null);
       var m = /^(.*)\.(\d+)$/.exec(name);
       if (m) n[m[1]] = Math.max(n[m[1]] || 0, +m[2] + 1);
     });
-    SP = { img: img, n: n, art: S.artPxPerM, sw: S.screen[0], sh: S.screen[1], k: S.scale };
+    SP = { img: img, n: n, rows: rows, pal: S.palette, looks: {}, art: S.artPxPerM, sw: S.screen[0], sh: S.screen[1], k: S.scale };
     return SP;
+  }
+
+  // 1文字1ドットの行を小さいキャンバスにする。over は色の文字ごとの差し替え（見た目の色）
+  function paint(rows, palette, over) {
+    var w = rows[0].length, h = rows.length, c = newCanvas(w, h);
+    var cx = c.getContext('2d'), id = cx.createImageData(w, h);
+    rows.forEach(function (r, y) {
+      for (var x = 0; x < w; x++) {
+        var hex = (over && over[r[x]]) || palette[r[x]];
+        if (!hex) continue;
+        var v = parseInt(hex.slice(1), 16), o = (y * w + x) * 4;
+        id.data[o] = v >> 16; id.data[o + 1] = (v >> 8) & 255; id.data[o + 2] = v & 255; id.data[o + 3] = 255;
+      }
+    });
+    cx.putImageData(id, 0, 0);
+    return c;
+  }
+
+  function byId(list, id) { for (var i = 0; i < (list || []).length; i++) if (list[i].id === id) return list[i]; return null; }
+
+  // 見た目（種類・髪・服）ごとの絵。config.character.looks の colors で色の文字を置き換えた物を、見た目と絵の名前ごとに1回だけ作る
+  function lookImg(c, side, frame) {
+    var A = sprites(), CH = window.GAME_DATA.config.character;
+    var body = byId(CH.bodies, c && c.body), sp = (body && body.sprite) || 'player', name = sp + '.' + side + '.' + frame;
+    var hair = byId(CH.looks.hair, c && c.hair), shirt = byId(CH.looks.shirt, c && c.shirt);
+    if (!hair && !shirt) return img(name);
+    var key = name + '|' + (hair ? hair.id : '') + '|' + (shirt ? shirt.id : ''), im = A.looks[key];
+    if (im) return im;
+    if (!A.rows[name]) return img(name);
+    var over = {}, k;
+    for (k in (hair && hair.colors) || {}) over[k] = hair.colors[k];
+    for (k in (shirt && shirt.colors) || {}) over[k] = shirt.colors[k];
+    return (A.looks[key] = paint(A.rows[name], A.pal, over));
   }
 
   function img(name) { var c = SP.img[name]; if (!c && missing.indexOf(name) < 0) missing.push(name); return c; }
@@ -156,7 +179,7 @@
   }
 
   // キャラクターの絵：向きは facing にいちばん近い4方向。止まっている時は 0、歩いている時は 1 と 2 を config.anim.walkFrameSec ごとに
-  function charSprite(kind, e, time, frameSec) {
+  function charSprite(kind, e, time, frameSec, look) {
     var f = e.facing, dx = 0, dy = 1; // dir() を呼ばない（フレームごとにオブジェクトを作らない）
     if (typeof f === 'number') { dx = Math.cos(f); dy = Math.sin(f); } else if (f && (f.x || f.y)) { dx = f.x; dy = f.y; }
     var side = Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
@@ -164,7 +187,8 @@
     if (!m) { m = { x: e.x, y: e.y, t: -1 }; if (moved) moved.set(e, m); }
     if (m.x !== e.x || m.y !== e.y) { m.x = e.x; m.y = e.y; m.t = time; }
     var walking = time - m.t < 0.1; // 描く回数が進行の刻みより多くても、歩きの間は止まって見えない
-    return img(kind + '.' + side + '.' + (walking ? 1 + Math.floor(time / frameSec) % 2 : 0));
+    var fr = walking ? 1 + Math.floor(time / frameSec) % 2 : 0;
+    return look ? lookImg(e, side, fr) : img(kind + '.' + side + '.' + fr);
   }
 
   // 文字は変わらない限り1回だけ小さいキャンバスに描いて使い回す（毎フレーム fillText しない）。
@@ -174,12 +198,12 @@
     if (s !== textS) { texts = {}; textS = s; }
     var id = kind + '|' + text, t = texts[id];
     if (t) return t;
-    var size = { sign: 13, name: 13, hp: 14, place: 16, prompt: 18 }[kind];
+    var size = { sign: 13, name: 13, hp: 14, place: 16, prompt: 18, q: 16 }[kind];
     var c = newCanvas(1, 1), x = c.getContext('2d');
     x.font = font(size);
     var tw = x.measureText(text).width;
     // 箱：sign 左右10 高さ24 角4・place 左右16 高さ36 角18・prompt 左右20 高さ44 角22 枠2。name と hp は影のぶん4の余白
-    var w = tw + { sign: 20, name: 8, hp: 8, place: 32, prompt: 40 }[kind], h = { sign: 24, name: 24, hp: 24, place: 36, prompt: 44 }[kind];
+    var w = tw + { sign: 20, name: 8, hp: 8, place: 32, prompt: 40, q: 8 }[kind], h = { sign: 24, name: 24, hp: 24, place: 36, prompt: 44, q: 24 }[kind];
     c.width = Math.ceil(w * s); c.height = Math.ceil(h * s);
     x = c.getContext('2d'); x.scale(s, s);
     x.font = font(size); x.textBaseline = 'middle'; x.textAlign = kind === 'hp' ? 'left' : 'center';
@@ -189,6 +213,7 @@
       rr(x, 1, 1, w - 2, 42, 21); x.fillStyle = '#fff'; x.fill(); x.lineWidth = 2; x.strokeStyle = C.outline; x.stroke();
       x.fillStyle = C.outline; x.fillText(text, w / 2, 23);
     }
+    if (kind === 'q') { x.fillStyle = '#fff'; x.fillText(text, w / 2, 13); }
     if (kind === 'name' || kind === 'hp') {
       x.fillStyle = kind === 'hp' ? '#fff' : C.signText; x.shadowColor = '#000'; x.shadowBlur = 2; x.shadowOffsetY = 1;
       x.fillText(text, kind === 'hp' ? 4 : w / 2, 12 + (kind === 'hp' ? 0 : 1));
@@ -224,6 +249,17 @@
       var kim = img('key');
       ctx.drawImage(kim, 44 - kim.width * 1.5, 76 - kim.height * 1.5, kim.width * 3, kim.height * 3);
     }
+    // 能力の枠 40×40 角8 left 72 top 56（鍵の枠と同じ形）・中に「Q」16 太さ700・待ち時間は下から黒 45% でおおう。能力なしの時は出さない
+    var ab = byId(game.config.abilities, me.ability);
+    if (ab && ab.type) {
+      rr(ctx, 73, 57, 38, 38, 7); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.stroke();
+      t = textImg('q', String(game.config.abilityKey).replace(/^Key/, ''), C, s);
+      ctx.drawImage(t.c, 92 - t.w / 2, 76 - 12, t.w, t.h);
+      if (me.abilityCd > 0 && ab.cooldownSec) {
+        var ch = 40 * Math.min(1, me.abilityCd / ab.cooldownSec);
+        ctx.save(); rr(ctx, 72, 56, 40, 40, 8); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(72, 96 - ch, 40, ch); ctx.restore();
+      }
+    }
     // 場所 高さ36 左右16 角18 右24 上24 文字16
     var floor = game.floors[me.floor];
     var zone = Sim.zoneAt(game, me.floor, me.x, me.y);
@@ -253,7 +289,7 @@
 
   // キャラクターを n 番目に入れる。足もとの中央を画面の px の整数に置く（自分は画面の中央から動かない）
   function chr(kind, e, n) {
-    var im = charSprite(kind, e, V.t, V.frameSec), b = blend(e, cur), o = slot(n), k = V.k;
+    var im = charSprite(kind, e, V.t, V.frameSec, kind === 'player'), b = blend(e, cur), o = slot(n), k = V.k;
     var fx0 = Math.round(b.x * V.ppm) - V.camX, fy = Math.round(b.y * V.ppm) + Math.round((e.r || 0) * V.ppm) - V.camY;
     o.im = blink(e.hurtT) ? null : im; o.sx = fx0 - Math.floor(im.width / 2) * k; o.sy = fy - im.height * k; o.w = im.width * k; o.h = im.height * k;
     o.foot = (b.y + (e.r || 0)) * V.art; o.shadow = true; o.fx = fx0; o.fy = fy;
@@ -269,8 +305,8 @@
     if (o.im) ctx.drawImage(o.im, o.sx, o.sy, o.im.width * k, o.im.height * k);
   }
 
-  function drawPlay(ctx, game, dt, alpha, prev) {
-    var A = sprites(), cfg = game.config, C = colors(game), me = game.players[0], P = prep(game, me.floor);
+  function drawPlay(ctx, game, dt, alpha, prev, meId) {
+    var A = sprites(), cfg = game.config, C = colors(game), me = byId(game.players, meId) || game.players[0], P = prep(game, me.floor);
     var k = A.k, ppm = A.art * k, t = game.time, i;
     V.prev = prev; V.a = alpha == null ? 1 : alpha; V.snap = cfg.anim.snapM; V.t = t; V.frameSec = cfg.anim.walkFrameSec; V.k = k; V.ppm = ppm; V.art = A.art;
     // カメラ：自分の混ぜた位置を画面の px で追う（設計図9節）。世界は画面の 1px 単位で流れる
@@ -337,6 +373,15 @@
       ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, (atk.rangeM || 1.2) * ppm, a - half, a + half); ctx.closePath();
       ctx.fillStyle = '#fff'; ctx.fill(); ctx.globalAlpha = 1;
     }
+    // ほかの人の頭の上に名前（13px 太さ700 白・黒の影）。絵の上の端の 2px 上
+    for (i = 0; i < game.players.length; i++) {
+      var o2 = game.players[i];
+      if (o2 === me || o2.floor !== me.floor || !o2.alive || o2.escaped || !o2.name) continue;
+      blend(o2, cur);
+      var nt = textImg('name', o2.name, C, s), head = lookImg(o2, 'down', 0);
+      var nx = Math.round(cur.x * ppm) - camX, ny = Math.round(cur.y * ppm) + Math.round((o2.r || 0) * ppm) - camY - (head ? head.height : 0) * k;
+      ctx.drawImage(nt.c, nx - nt.w / 2, ny - 2 - nt.h, nt.w, nt.h);
+    }
     // 当たった時の輪
     for (i = fx.length - 1; i >= 0; i--) if ((fx[i].t -= dt) <= 0) fx.splice(i, 1);
     for (i = 0; i < fx.length; i++) {
@@ -357,8 +402,8 @@
   }
 
   // step のたびに空になる events を、描く物として残す
-  function addEvents(game) {
-    var me = game.players[0];
+  function addEvents(game, meId) {
+    var me = byId(game.players, meId) || game.players[0];
     (game.events || []).forEach(function (e) {
       if (e.type === 'hurt' && (e.playerId == null || e.playerId === me.id)) flash = 0.3;
       if (e.type !== 'hit') return; // hit に位置は無い。ゾンビの位置、倒して消えた時は殴ったプレイヤーの前
@@ -386,17 +431,12 @@
     return b; // ボタンの当たりの範囲（論理の座標）
   }
 
-  function drawTitle(ctx, config) {
-    return drawCard(ctx, colors({ config: config }), 'ゾンビ脱出（仮）',
-      ['鍵を見つけて、エレベーターから脱出する', '移動：WASD・矢印　E：拾う・階を移る　スペース：たたく'], '始める');
-  }
-
   function drawResult(ctx, game) {
     var s = Math.floor(game.time), t = 'かかった時間　' + Math.floor(s / 60) + '分' + (s % 60) + '秒';
     return drawCard(ctx, colors(game), game.status === 'escaped' ? '脱出成功' : 'ゲームオーバー', [t], 'もう一度');
   }
 
-  var Render = { W: W, H: H, drawPlay: drawPlay, drawTitle: drawTitle, drawResult: drawResult, addEvents: addEvents, missing: missing, reset: function () { fx = []; flash = 0; } };
+  var Render = { W: W, H: H, drawPlay: drawPlay, drawResult: drawResult, addEvents: addEvents, missing: missing, lookImg: lookImg, reset: function () { fx = []; flash = 0; } };
   if (typeof window !== 'undefined') window.Render = Render;
   if (typeof module !== 'undefined') module.exports = Render;
 })();

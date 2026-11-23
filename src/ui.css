@@ -1,0 +1,121 @@
+/* トップ・キャラクターの一覧・作成・待機の部屋（設計図/見本-キャラクターと待機の部屋.html の寸法のまま） */
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; min-height: 100%; background: #14110f; color: #fff; font-family: "Hiragino Sans", "Noto Sans JP", sans-serif; }
+body.play { height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+body:not(.play) #game { display: none; }
+canvas#game { display: block; touch-action: none; image-rendering: pixelated; }
+.scr[hidden] { display: none !important; }
+button { font-family: inherit; cursor: pointer; }
+canvas.px { image-rendering: pixelated; display: block; }
+
+/* ボタン：大きい 48 角24 文字18/48・小さい 40 角20 左右20 文字15/40・線だけ 枠2px 白 */
+.btn { height: 48px; padding: 0 32px; border: 0; border-radius: 24px; background: #6fba2c; color: #fff; font-size: 18px; line-height: 48px; font-weight: 700; white-space: nowrap; text-align: center; flex: none; }
+.btn.s { height: 40px; padding: 0 20px; border-radius: 20px; font-size: 15px; line-height: 40px; }
+.btn.o { background: transparent; border: 2px solid #fff; line-height: 44px; }
+.btn.s.o { line-height: 36px; }
+.btn:disabled, .btn.off { opacity: .4; cursor: default; }
+.back { width: 80px; padding: 0 !important; }
+
+/* 図1 トップ */
+#top { padding: max(24px, calc(50vh - 128px)) 16px 24px; text-align: center; }
+#top h1 { margin: 0; font-size: 40px; line-height: 56px; font-weight: 700; }
+#top .sub { margin-top: 12px; font-size: 16px; line-height: 24px; }
+#top .row { margin-top: 32px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+#top .row .btn { padding: 0; }
+#top .go { width: 232px; }
+#top .chars { width: 186px; }
+#top .note { margin-top: 16px; min-height: 20px; font-size: 14px; line-height: 20px; color: #cfc8bc; }
+
+/* 上の止まる行 top 0・高さ 72・左右 40・下に線 1px ／ 下の止まる行 bottom 0・高さ 80・上に線 1px */
+.bar { position: fixed; left: 0; right: 0; top: 0; height: 72px; z-index: 10; background: #14110f; border-bottom: 1px solid #3a332e; padding: 0 40px; display: flex; align-items: center; gap: 16px; }
+.bar.foot { top: auto; bottom: 0; height: 80px; border-bottom: 0; border-top: 1px solid #3a332e; }
+.bar .ttl { margin: 0; font-size: 24px; line-height: 32px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.bar .gap { flex: 1; }
+.st { font-size: 13px; line-height: 20px; color: #cfc8bc; white-space: nowrap; }
+.lab { font-size: 13px; line-height: 20px; color: #cfc8bc; white-space: nowrap; }
+.page { padding: 96px 40px 40px; }
+
+/* キャラクターのカード 288×136（待機は 264×136）角12 内側16 すき間16 */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, 288px); gap: 16px; }
+.card { position: relative; width: 288px; height: 136px; background: #221d1a; border: 1px solid #3a332e; border-radius: 12px; cursor: pointer; overflow: hidden; }
+.card.w { width: 264px; }
+.card.on { border-color: #6fba2c; box-shadow: inset 0 0 0 1px #6fba2c; }
+.card > * { position: absolute; }
+.card .face { left: 16px; top: 16px; }
+.card .nm { left: 104px; top: 16px; right: 56px; overflow: hidden; text-overflow: ellipsis; }
+.card.w .nm { right: 16px; }
+.card .bdg { left: 104px; top: 48px; }
+.card .st { left: 16px; top: 100px; }
+.card .dot { right: 16px; top: 58px; width: 48px; height: 60px; }
+.x { right: 16px; top: 16px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 12px; background: #3a332e; color: #fff; font-size: 16px; line-height: 24px; text-align: center; }
+.ask { inset: 0; background: #221d1a; padding: 16px; cursor: default; }
+.ask .st { position: static; color: #fff; overflow: hidden; text-overflow: ellipsis; }
+.ask .btns { position: absolute; left: 16px; bottom: 16px; display: flex; gap: 16px; }
+.face { width: 72px; height: 72px; border-radius: 8px; background: #55504c; overflow: hidden; display: block; object-fit: cover; flex: none; }
+.face > img, .face > canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+.face > canvas { image-rendering: pixelated; }
+.nm { font-size: 16px; line-height: 24px; font-weight: 700; white-space: nowrap; }
+
+/* バッジ 高さ24 角4 左右10 文字13 太さ700。緑・灰・黄 */
+.bdg { display: inline-block; height: 24px; padding: 0 10px; border-radius: 4px; background: #6fba2c; color: #fff; font-size: 13px; line-height: 24px; font-weight: 700; white-space: nowrap; }
+.bdg.g { background: #55504c; }
+.bdg.y { background: #f5c542; color: #1d1a22; }
+
+/* パネル 地 #221D1A 線 1px #3A332E 角12 */
+.panel { position: relative; background: #221d1a; border: 1px solid #3a332e; border-radius: 12px; }
+
+/* 図3 作成：左 360×440・右 824×440・間16・内側24 */
+.edit { display: flex; gap: 16px; align-items: flex-start; }
+.edit .left { width: 360px; height: 440px; flex: none; padding: 24px; display: flex; flex-direction: column; align-items: center; }
+.edit .left .face { width: 160px; height: 160px; border-radius: 12px; }
+.edit .left .btns { margin-top: 16px; display: flex; gap: 8px; }
+.edit .left .pick { width: 152px; padding: 0; }
+.edit .left .drop { width: 80px; padding: 0; }
+.edit .left .lab { margin-top: 24px; align-self: flex-start; }
+.edit .left .dot { margin-top: 12px; width: 96px; height: 120px; }
+.edit .right { flex: 1; max-width: 824px; height: 440px; padding: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 380px)); column-gap: 16px; row-gap: 16px; align-content: start; }
+.fld .lab { display: block; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; }
+.inp { display: block; width: 100%; height: 40px; border-radius: 8px; border: 1px solid #55504c; background: #1d1a22; padding: 0 12px; font-family: inherit; font-size: 15px; color: #fff; min-width: 0; }
+.desc { height: 40px; display: flex; align-items: center; font-size: 13px; line-height: 20px; color: #fff; }
+.sws { height: 40px; display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+.sw { width: 32px; height: 32px; padding: 0; border-radius: 8px; border: 2px solid transparent; }
+.sw.on { border-color: #fff; }
+.err { grid-column: 1 / -1; margin-top: 8px; min-height: 20px; font-size: 13px; line-height: 20px; color: #e5484d; }
+
+/* 図4 待機の部屋：パネル 592×520・間16・内側24 */
+#wait .bar .url { flex: 0 1 372px; }
+#wait .bar .lab { margin-left: auto; }
+.wait { display: flex; gap: 16px; padding-bottom: 104px; }
+.wait .panel { width: 592px; height: 520px; display: flex; flex-direction: column; }
+.wait .head { margin: 20px 24px 0; overflow: hidden; text-overflow: ellipsis; flex: none; }
+/* 右の余白はスクロールバーの幅のぶんを空け、264 のカードが2列入るようにする */
+.wait .pick { margin-top: 16px; padding: 0 0 24px 24px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, 264px); gap: 16px; align-content: start; }
+.wait .who { margin-top: 12px; overflow-y: auto; }
+.rowp { position: relative; height: 64px; border-bottom: 1px solid #3a332e; }
+.rowp > * { position: absolute; }
+.rowp .face { left: 24px; top: 12px; width: 40px; height: 40px; }
+.rowp .face.none { background: #3a332e; }
+.rowp .nm { left: 80px; top: 10px; right: 200px; font-size: 15px; line-height: 22px; overflow: hidden; text-overflow: ellipsis; }
+.rowp .st { left: 80px; top: 32px; right: 200px; overflow: hidden; text-overflow: ellipsis; }
+.rowp .bdgs { right: 24px; top: 20px; display: flex; gap: 8px; }
+.foot .st { flex: 1; min-width: 0; white-space: normal; }
+.foot .ready { width: 176px; padding: 0; }
+.foot .start { width: 148px; padding: 0; }
+
+/* 幅が 900px より狭い時：パネルを縦1列、カードを横幅いっぱいの1列。止まる行の位置と高さは変えない。中身は枠線から左右16以上 */
+@media (max-width: 899px) {
+  .bar { padding: 0 16px; }
+  .page { padding: 96px 16px 40px; }
+  .page.wait { padding-bottom: 104px; }
+  .cards, .wait .pick { grid-template-columns: 1fr; }
+  .card, .card.w { width: auto; }
+  .edit, .wait { flex-direction: column; align-items: stretch; }
+  .edit .left, .edit .right, .wait .panel { width: auto; height: auto; max-width: none; }
+  .edit .right { grid-template-columns: minmax(0, 1fr); }
+  .wait .pick, .wait .who { overflow: visible; }
+  .wait .pick { padding-right: 24px; }
+  .wait .who { padding-bottom: 12px; }
+  #wait .bar .lab { display: none; }
+  #wait .bar .url { flex: 1 1 0; }
+  .foot .ready, .foot .start { width: auto; padding: 0 20px; }
+}
