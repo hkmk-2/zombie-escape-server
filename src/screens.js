@@ -280,7 +280,7 @@
 
   // ---- 図D キャラクターを選ぶ（待機の部屋の上に重ねる）。「決定」で今と同じ char を送る ----
   var O = q(W, '.ovl'), sel = null;
-  function openPick() { sel = picked; O.hidden = false; drawPick(); q(O, '.ok').focus(); }
+  function openPick() { sel = picked; O.hidden = false; drawPick(); q(O, '.ok').focus({ preventScroll: true }); q(O, '.pkp').scrollTop = 0; } // 狭い幅で見出しと × が見える位置から開く
   function drawPick() {
     var list = Chars.load(store, config), box = q(O, '.pks');
     if (!find(list, sel)) sel = list[0] ? list[0].id : null;
