@@ -1,22 +1,45 @@
-/* トップ・キャラクターの一覧・作成・待機の部屋（設計図/見本-キャラクターと待機の部屋.html の寸法のまま） */
+/* トップ・キャラクターの一覧・作成・待機の部屋（設計図/見本-見た目の作り直し.html の図A〜図D と「寸法の一覧」の値のまま） */
+:root {
+  /* 明るい側（トップ・一覧・作成） */
+  --l-bg: #eff4dd; --l-text: #5e483d; --l-green: #7cbd63; --l-on: #3fd0a7; --l-save: #43debe; --l-line: #d8d9c9; --l-tab-on: #eeffdd; --l-card: #ffffff; --err: #d9534f;
+  /* 暗い側（待機の部屋・キャラクターを選ぶ） */
+  --d-bg: #000000; --d-panel: #282e2c; --d-floor: #6f7376; --d-wall: #5f555d; --d-start: #2ce7ca; --d-start-text: #2a6d64; --d-sub: #69bbad; --d-host: #f5c542; --d-host-text: #1d1a22;
+  --play-bg: #14110f;
+  /* 止まる行 */
+  --bar-h: 72px; --foot-h: 80px; --side: 40px;
+  /* 図A */
+  --pv-w: 43%; --tabs-w: 400px; --tabs-h: 64px; --tab-w: 88px; --tab-h: 48px; --tp-w: 544px; --tp-h: 368px; --tp-x: 64px;
+  --opt-w: 120px; --opt-wide: 264px; --opt-h: 80px; --sw: 44px; --sw-gap: 17px; --inp-h: 48px; --save-w: 256px; --save-h: 64px;
+  /* 図B */
+  --card-w: 288px; --card-h: 136px;
+  /* 図C */
+  --band-w: 552px; --band-h: 56px; --room-w: 920px; --room-h: 456px; --wall-h: 96px; --fig-w: 128px; --panel-w: 248px;
+  --chg-w: 216px; --rdy-w: 192px; --act-h: 64px; --start-w: 320px; --start-h: 80px;
+  /* 図D */
+  --pk-w: 1200px; --pk-h: 640px; --pk-item-w: 144px; --pk-item-h: 168px; --pk-face: 96px; --ok-w: 320px; --ok-h: 64px;
+}
 * { box-sizing: border-box; }
-html, body { margin: 0; width: 100%; min-height: 100%; background: #14110f; color: #fff; font-family: "Hiragino Sans", "Noto Sans JP", sans-serif; }
-body.play { height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+html, body { margin: 0; width: 100%; min-height: 100%; font-family: "Hiragino Sans", "Noto Sans JP", sans-serif; }
+body { background: var(--l-bg); color: var(--l-text); }
+body.dark { background: var(--d-bg); color: #fff; }
+body.play { background: var(--play-bg); color: #fff; height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center; }
 body:not(.play) #game { display: none; }
 canvas#game { display: block; touch-action: none; image-rendering: pixelated; }
-.scr[hidden] { display: none !important; }
+.scr[hidden], .ovl[hidden], .tp[hidden] { display: none !important; }
 button { font-family: inherit; cursor: pointer; }
 canvas.px { image-rendering: pixelated; display: block; }
+/* キャラクターの絵：--w --h は絵のドット数（screens.js が絵から入れる）、--k は倍率 */
+canvas.dot { width: calc(var(--w, 24) * var(--k, 2) * 1px); height: calc(var(--h, 30) * var(--k, 2) * 1px); flex: none; }
 
-/* ボタン：大きい 48 角24 文字18/48・小さい 40 角20 左右20 文字15/40・線だけ 枠2px 白 */
-.btn { height: 48px; padding: 0 32px; border: 0; border-radius: 24px; background: #6fba2c; color: #fff; font-size: 18px; line-height: 48px; font-weight: 700; white-space: nowrap; text-align: center; flex: none; }
+/* ボタン：大きい 48 角24 文字18/48・小さい 40 角20 左右20 文字15/40・線だけ 枠2px 文字の色 */
+.btn { height: 48px; padding: 0 32px; border: 0; border-radius: 24px; background: var(--l-green); color: #fff; font-size: 18px; line-height: 48px; font-weight: 700; white-space: nowrap; text-align: center; flex: none; }
 .btn.s { height: 40px; padding: 0 20px; border-radius: 20px; font-size: 15px; line-height: 40px; }
-.btn.o { background: transparent; border: 2px solid #fff; line-height: 44px; }
+.btn.o { background: transparent; color: inherit; border: 2px solid currentColor; line-height: 44px; }
 .btn.s.o { line-height: 36px; }
 .btn:disabled, .btn.off { opacity: .4; cursor: default; }
 .back { width: 80px; padding: 0 !important; }
 
-/* 図1 トップ */
+/* 図1 トップ（図は無いので並べ方は前のまま、色だけ明るい側） */
 #top { padding: max(24px, calc(50vh - 128px)) 16px 24px; text-align: center; }
 #top h1 { margin: 0; font-size: 40px; line-height: 56px; font-weight: 700; }
 #top .sub { margin-top: 12px; font-size: 16px; line-height: 24px; }
@@ -24,98 +47,159 @@ canvas.px { image-rendering: pixelated; display: block; }
 #top .row .btn { padding: 0; }
 #top .go { width: 232px; }
 #top .chars { width: 186px; }
-#top .note { margin-top: 16px; min-height: 20px; font-size: 14px; line-height: 20px; color: #cfc8bc; }
+#top .note { margin-top: 16px; min-height: 20px; font-size: 14px; line-height: 20px; }
 
 /* 上の止まる行 top 0・高さ 72・左右 40・下に線 1px ／ 下の止まる行 bottom 0・高さ 80・上に線 1px */
-.bar { position: fixed; left: 0; right: 0; top: 0; height: 72px; z-index: 10; background: #14110f; border-bottom: 1px solid #3a332e; padding: 0 40px; display: flex; align-items: center; gap: 16px; }
-.bar.foot { top: auto; bottom: 0; height: 80px; border-bottom: 0; border-top: 1px solid #3a332e; }
+.bar { position: fixed; left: 0; right: 0; top: 0; height: var(--bar-h); z-index: 10; background: var(--l-bg); border-bottom: 1px solid var(--l-line); padding: 0 var(--side); display: flex; align-items: center; gap: 16px; }
 .bar .ttl { margin: 0; font-size: 24px; line-height: 32px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .bar .gap { flex: 1; }
-.st { font-size: 13px; line-height: 20px; color: #cfc8bc; white-space: nowrap; }
-.lab { font-size: 13px; line-height: 20px; color: #cfc8bc; white-space: nowrap; }
-.page { padding: 96px 40px 40px; }
+.st, .lab { font-size: 13px; line-height: 20px; white-space: nowrap; }
+.page { padding: 96px var(--side) 40px; }
 
-/* キャラクターのカード 288×136（待機は 264×136）角12 内側16 すき間16 */
-.cards { display: grid; grid-template-columns: repeat(auto-fill, 288px); gap: 16px; }
-.card { position: relative; width: 288px; height: 136px; background: #221d1a; border: 1px solid #3a332e; border-radius: 12px; cursor: pointer; overflow: hidden; }
-.card.w { width: 264px; }
-.card.on { border-color: #6fba2c; box-shadow: inset 0 0 0 1px #6fba2c; }
+/* 図B カード 288×136 角24 地白 枠2px 内側16 */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, var(--card-w)); gap: 16px; }
+.card { position: relative; width: var(--card-w); height: var(--card-h); background: var(--l-card); border: 2px solid var(--l-line); border-radius: 24px; cursor: pointer; overflow: hidden; }
 .card > * { position: absolute; }
-.card .face { left: 16px; top: 16px; }
-.card .nm { left: 104px; top: 16px; right: 56px; overflow: hidden; text-overflow: ellipsis; }
-.card.w .nm { right: 16px; }
-.card .bdg { left: 104px; top: 48px; }
-.card .st { left: 16px; top: 100px; }
-.card .dot { right: 16px; top: 58px; width: 48px; height: 60px; }
-.x { right: 16px; top: 16px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 12px; background: #3a332e; color: #fff; font-size: 16px; line-height: 24px; text-align: center; }
-.ask { inset: 0; background: #221d1a; padding: 16px; cursor: default; }
-.ask .st { position: static; color: #fff; overflow: hidden; text-overflow: ellipsis; }
-.ask .btns { position: absolute; left: 16px; bottom: 16px; display: flex; gap: 16px; }
-.face { width: 72px; height: 72px; border-radius: 8px; background: #55504c; overflow: hidden; display: block; object-fit: cover; flex: none; }
+/* 位置は枠 2px の内側から測るので、外の縁から 16 は 14 */
+.card .face { left: 14px; top: 14px; }
+.card .nm { left: 102px; top: 14px; right: 54px; overflow: hidden; text-overflow: ellipsis; }
+.card .bdg { left: 102px; top: 46px; }
+.card .st { left: 14px; top: 98px; }
+.card .dot { right: 14px; top: 56px; --k: 2; }
+.x { right: 14px; top: 14px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 12px; background: var(--l-line); color: var(--l-text); font-size: 16px; line-height: 24px; text-align: center; }
+.ask { inset: 0; background: var(--l-card); padding: 14px 16px; cursor: default; }
+.ask .st { position: static; overflow: hidden; text-overflow: ellipsis; }
+.ask .btns { position: absolute; left: 16px; bottom: 14px; display: flex; gap: 16px; }
+.face { width: 72px; height: 72px; border-radius: 16px; background: var(--l-line); overflow: hidden; display: block; flex: none; }
 .face > img, .face > canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
 .face > canvas { image-rendering: pixelated; }
 .nm { font-size: 16px; line-height: 24px; font-weight: 700; white-space: nowrap; }
 
-/* バッジ 高さ24 角4 左右10 文字13 太さ700。緑・灰・黄 */
-.bdg { display: inline-block; height: 24px; padding: 0 10px; border-radius: 4px; background: #6fba2c; color: #fff; font-size: 13px; line-height: 24px; font-weight: 700; white-space: nowrap; }
-.bdg.g { background: #55504c; }
-.bdg.y { background: #f5c542; color: #1d1a22; }
+/* バッジ 高さ24 左右10 文字13 太さ700。明るい側は角12・緑、暗い側（待機の部屋）は角4 */
+.bdg { display: inline-block; height: 24px; padding: 0 10px; border-radius: 12px; background: var(--l-green); color: #fff; font-size: 13px; line-height: 24px; font-weight: 700; white-space: nowrap; }
+.bdg.g { background: var(--l-line); color: var(--l-text); }
 
-/* パネル 地 #221D1A 線 1px #3A332E 角12 */
-.panel { position: relative; background: #221d1a; border: 1px solid #3a332e; border-radius: 12px; }
-
-/* 図3 作成：左 360×440・右 824×440・間16・内側24 */
-.edit { display: flex; gap: 16px; align-items: flex-start; }
-.edit .left { width: 360px; height: 440px; flex: none; padding: 24px; display: flex; flex-direction: column; align-items: center; }
-.edit .left .face { width: 160px; height: 160px; border-radius: 12px; }
-.edit .left .btns { margin-top: 16px; display: flex; gap: 8px; }
-.edit .left .pick { width: 152px; padding: 0; }
-.edit .left .drop { width: 80px; padding: 0; }
-.edit .left .lab { margin-top: 24px; align-self: flex-start; }
-.edit .left .dot { margin-top: 12px; width: 96px; height: 120px; }
-.edit .right { flex: 1; max-width: 824px; height: 440px; padding: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 380px)); column-gap: 16px; row-gap: 16px; align-content: start; }
+/* 図A 作成：左 43% がプレビュー、右にタブの帯 400×64・中身 544×368（x 608・y 176）・保存 256×64 */
+.mk { display: grid; grid-template-columns: var(--pv-w) minmax(0, 1fr); grid-template-rows: auto auto 1fr; padding: calc(var(--bar-h) + 16px) 0 var(--foot-h); }
+.mk > .pv { grid-column: 1; grid-row: 1 / 4; padding-top: 144px; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.mk > .pv .dot { --k: 10; }
+.pn { margin-top: 16px; min-height: 28px; max-width: 100%; padding: 0 16px; font-size: 20px; line-height: 28px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; }
+.mk > .tp, .mk > .sv { grid-column: 2; margin-left: var(--tp-x); width: min(var(--tp-w), 100% - var(--tp-x) - var(--side)); }
+.mk > .tp { grid-row: 2; margin-top: 24px; min-height: var(--tp-h); align-self: start; }
+.mk > .sv { grid-row: 3; margin-top: 32px; text-align: center; align-self: start; }
+/* タブの帯 角32 内側 8/12 地 緑。タブ 88×48 角24 すき間8 文字13/48。中身の幅の中央に置く */
+.mk > .tabs { grid-column: 2; grid-row: 1; justify-self: start; display: flex; gap: 8px; width: var(--tabs-w); height: var(--tabs-h); padding: 8px 12px; border-radius: 32px; background: var(--l-green);
+  margin-left: calc(var(--tp-x) + (min(var(--tp-w), 100% - var(--tp-x) - var(--side)) - var(--tabs-w)) / 2); }
+.tab { flex: none; width: var(--tab-w); height: var(--tab-h); padding: 0; border: 0; border-radius: 24px; background: transparent; color: var(--l-tab-on); font-size: 13px; line-height: var(--tab-h); font-weight: 700; white-space: nowrap; }
+.tab.on { background: var(--l-tab-on); color: var(--l-text); }
+.tp > .lab { display: block; margin-bottom: 4px; }
+.tp > * + .lab { margin-top: 24px; }
+.fld { display: block; min-width: 0; }
 .fld .lab { display: block; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; }
-.inp { display: block; width: 100%; height: 40px; border-radius: 8px; border: 1px solid #55504c; background: #1d1a22; padding: 0 12px; font-family: inherit; font-size: 15px; color: #fff; min-width: 0; }
-.desc { height: 40px; display: flex; align-items: center; font-size: 13px; line-height: 20px; color: #fff; }
-.sws { height: 40px; display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
-.sw { width: 32px; height: 32px; padding: 0; border-radius: 8px; border: 2px solid transparent; }
-.sw.on { border-color: #fff; }
-.err { grid-column: 1 / -1; margin-top: 8px; min-height: 20px; font-size: 13px; line-height: 20px; color: #e5484d; }
+.fld + .lab { margin-top: 24px; }
+.inp { display: block; width: 100%; height: var(--inp-h); border-radius: 24px; border: 2px solid var(--l-line); background: var(--l-card); padding: 0 20px; font-family: inherit; font-size: 16px; color: var(--l-text); min-width: 0; }
+.tp.two { display: grid; grid-template-columns: repeat(2, minmax(0, var(--opt-wide))); column-gap: 16px; align-content: start; }
+.fc { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.fc .face.big { width: 160px; height: 160px; border-radius: 24px; }
+.fc .btn { height: var(--inp-h); border-radius: 24px; line-height: 44px; padding: 0; }
+.fc .pick { width: 152px; }
+.fc .drop { width: 80px; }
+.err { margin-top: 16px; min-height: 20px; font-size: 13px; line-height: 20px; color: var(--err); }
+/* 選択肢の枠 120×80（特殊能力は 264×80）角24 枠2px すき間16。選択中は枠4px と右上の ✓ の丸 28。説明が長い時は高さが伸びる */
+.opts { display: flex; flex-wrap: wrap; gap: 16px; padding-top: 4px; }
+.opt { position: relative; width: var(--opt-w); min-height: var(--opt-h); padding: 9px 16px; border: 2px solid var(--l-line); border-radius: 24px; background: var(--l-card); color: var(--l-text); text-align: left; display: flex; flex-direction: column; justify-content: center; }
+.opts.wide .opt { width: var(--opt-wide); }
+.opt .st { white-space: normal; }
+.opt.on { border-color: var(--l-on); box-shadow: inset 0 0 0 2px var(--l-on); }
+.opt.on::after { content: "✓"; position: absolute; right: -6px; top: -8px; width: 28px; height: 28px; border-radius: 14px; background: var(--l-on); color: #fff; font-size: 16px; line-height: 28px; text-align: center; font-weight: 700; }
+/* 色の丸 直径44・中心の間61。選択中は外に白4px と緑4px の輪。見出しと丸の間 12（輪のぶん 4 は内側の余白） */
+.sws { display: flex; flex-wrap: wrap; gap: var(--sw-gap); padding: 4px; margin-top: 4px; }
+/* 白に近い色が地の色に埋もれないよう、内側に 2px の線を引く */
+.sw { width: var(--sw); height: var(--sw); padding: 0; border: 0; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(94,72,61,.25); }
+.sw.on { box-shadow: inset 0 0 0 2px rgba(94,72,61,.25), 0 0 0 4px #fff, 0 0 0 8px var(--l-on); }
+.sv .save { width: var(--save-w); height: var(--save-h); border-radius: 32px; padding: 0; background: var(--l-save); font-size: 20px; line-height: var(--save-h); }
 
-/* 図4 待機の部屋：パネル 592×520・間16・内側24 */
-#wait .bar .url { flex: 0 1 372px; }
-#wait .bar .lab { margin-left: auto; }
-.wait { display: flex; gap: 16px; padding-bottom: 104px; }
-.wait .panel { width: 592px; height: 520px; display: flex; flex-direction: column; }
-.wait .head { margin: 20px 24px 0; overflow: hidden; text-overflow: ellipsis; flex: none; }
-/* 右の余白はスクロールバーの幅のぶんを空け、264 のカードが2列入るようにする */
-.wait .pick { margin-top: 16px; padding: 0 0 24px 24px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, 264px); gap: 16px; align-content: start; }
-.wait .who { margin-top: 12px; overflow-y: auto; }
-.rowp { position: relative; height: 64px; border-bottom: 1px solid #3a332e; }
-.rowp > * { position: absolute; }
-.rowp .face { left: 24px; top: 12px; width: 40px; height: 40px; }
-.rowp .face.none { background: #3a332e; }
-.rowp .nm { left: 80px; top: 10px; right: 200px; font-size: 15px; line-height: 22px; overflow: hidden; text-overflow: ellipsis; }
-.rowp .st { left: 80px; top: 32px; right: 200px; overflow: hidden; text-overflow: ellipsis; }
-.rowp .bdgs { right: 24px; top: 20px; display: flex; gap: 8px; }
-.foot .st { flex: 1; min-width: 0; white-space: normal; }
-.foot .ready { width: 176px; padding: 0; }
-.foot .start { width: 148px; padding: 0; }
+/* 図C 待機の部屋：題の帯 552×56（中央・y 16）、部屋 920×456（x 40・y 96）、右のパネル 248×456（間 32）、下のボタン（部屋との間 16〜24、ボタンの間 16） */
+body.dark .bar { background: var(--d-bg); border-bottom-color: transparent; }
+.bar .band { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); width: min(var(--band-w), 100% - 2 * (var(--side) + 96px)); height: var(--band-h); padding: 0 16px; border-radius: 28px; background: #fff; color: var(--d-panel); font-size: 18px; line-height: var(--band-h); text-align: center; }
+.lobby { max-width: 1280px; margin: 0 auto; padding: calc(var(--bar-h) + 24px) var(--side) 24px; display: grid; grid-template-columns: minmax(0, var(--room-w)) var(--panel-w); column-gap: 32px; align-items: start; }
+.room { min-height: var(--room-h); border-radius: 24px; background: linear-gradient(var(--d-wall) 0 var(--wall-h), var(--d-floor) var(--wall-h)); }
+/* 絵の上端は部屋の上から 224。名前は絵の上 34、バッジ 80×24 は名前の上 4。横の間 128・中央そろえ */
+.crew { display: flex; flex-wrap: wrap; justify-content: center; row-gap: 24px; padding: 140px 16px 24px; }
+.fig { width: var(--fig-w); display: flex; flex-direction: column; align-items: center; }
+.fig .bdg { flex: none; width: 80px; padding: 0; border-radius: 4px; text-align: center; }
+.fig .bdg.r { background: var(--d-start); color: var(--d-panel); }
+.fig .bdg.g { background: var(--d-panel); color: #fff; }
+.fig .nm { flex: none; margin-top: 4px; width: 100%; font-size: 15px; line-height: 22px; color: #fff; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+.fig .dot { margin-top: 34px; --k: 4; }
+.fig .dot.none { opacity: .4; }
+/* 右のパネル 角12 内側16。入力欄・コピー 216×40、参加者の行 高さ40・間8。行が多い時はパネルの中だけ縦に送る */
+.side { height: var(--room-h); padding: 16px; border-radius: 12px; background: var(--d-panel); display: flex; flex-direction: column; }
+.side .lab { flex: none; }
+.side .url { flex: none; margin-top: 4px; height: 40px; padding: 0 12px; border: 1px solid var(--d-sub); border-radius: 8px; background: var(--d-bg); color: #fff; font-size: 13px; }
+.side .copy { margin-top: 8px; width: 100%; height: 40px; padding: 0; border-radius: 8px; background: var(--d-sub); color: var(--d-panel); font-size: 15px; line-height: 40px; }
+.side .copy + .lab { margin-top: 24px; }
+.who { margin-top: 4px; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.rowp { flex: none; display: flex; align-items: flex-start; gap: 8px; height: 41px; padding: 7px 0 9px; border-bottom: 1px solid var(--d-wall); }
+.rowp .nm { flex: 1; min-width: 0; font-size: 15px; overflow: hidden; text-overflow: ellipsis; }
+.rowp .bdg { width: 56px; padding: 0; border-radius: 4px; text-align: center; background: var(--d-host); color: var(--d-host-text); }
+.acts { grid-column: 1 / -1; margin-top: 16px; display: flex; gap: 16px; align-items: center; }
+.acts .btn { padding: 0; border-radius: 8px; }
+.acts .change { width: var(--chg-w); height: var(--act-h); background: var(--d-panel); border: 2px solid var(--d-sub); color: #fff; font-size: 16px; line-height: 60px; }
+.acts .ready { width: var(--rdy-w); height: var(--act-h); background: var(--d-sub); color: var(--d-panel); font-size: 18px; line-height: var(--act-h); }
+.acts .start { width: var(--start-w); height: var(--start-h); background: var(--d-start); color: var(--d-start-text); font-size: 28px; line-height: var(--start-h); }
+.lobby .msg { grid-column: 1 / -1; margin-top: 16px; white-space: normal; }
 
-/* 幅が 900px より狭い時：パネルを縦1列、カードを横幅いっぱいの1列。止まる行の位置と高さは変えない。中身は枠線から左右16以上 */
+/* 図D キャラクターを選ぶ：重ねるパネル 1200×640 角24。左 400 がプレビュー、右 640 が一覧（144×168 の4列とスクロールバーのぶん）、下に決定 320×64 */
+.ovl { position: fixed; inset: 0; z-index: 30; padding: 40px; background: var(--d-bg); display: flex; align-items: center; justify-content: center; }
+.pkp { position: relative; width: min(var(--pk-w), 100%); height: min(var(--pk-h), 100%); padding: 24px 40px 40px 32px; border-radius: 24px; background: var(--d-panel); display: grid; grid-template-columns: 400px minmax(0, 640px); grid-template-rows: 32px minmax(0, 1fr) var(--ok-h); column-gap: 88px; row-gap: 32px; justify-content: start; }
+.pkp .ttl { grid-column: 1 / -1; margin: 0; padding-right: 48px; font-size: 24px; line-height: 32px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pkp .close { right: 32px; top: 24px; width: 32px; height: 32px; border-radius: 16px; background: var(--d-wall); color: #fff; font-size: 20px; line-height: 32px; position: absolute; }
+.pkp .pv { grid-column: 1; grid-row: 2 / 4; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.pkp .pv .dot { --k: 10; }
+.ps { flex: none; margin-top: 4px; font-size: 13px; line-height: 20px; white-space: nowrap; }
+/* scrollbar-gutter で、縦に送る時もスクロールバーのぶんで列が減らない */
+.pks { grid-column: 2; grid-row: 2; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; display: grid; grid-template-columns: repeat(4, var(--pk-item-w)); gap: 16px; align-content: start; }
+.pk { width: var(--pk-item-w); height: var(--pk-item-h); padding: 14px 16px 0; border: 2px solid var(--d-wall); border-radius: 12px; background: var(--d-bg); color: #fff; display: flex; flex-direction: column; align-items: center; }
+.pk.on { border-color: var(--d-start); box-shadow: inset 0 0 0 2px var(--d-start); }
+.pk .face { width: var(--pk-face); height: var(--pk-face); border-radius: 8px; background: var(--d-wall); }
+.pk .nm { flex: none; margin-top: 12px; width: 100%; font-size: 15px; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+.okr { grid-column: 2; grid-row: 3; padding-right: 16px; text-align: center; }
+.okr .ok { width: var(--ok-w); height: var(--ok-h); padding: 0; border-radius: 8px; background: var(--d-start); color: var(--d-start-text); font-size: 20px; line-height: var(--ok-h); }
+
+/* 幅が 900px より狭い時：縦に並べ直す。画面は横に送らない。上の行は top 0・高さ 72 のまま、保存と下のボタンは下に止まる行（bottom 0・高さ 80）。最後の中身と下の行の間は 24 */
 @media (max-width: 899px) {
-  .bar { padding: 0 16px; }
-  .page { padding: 96px 16px 40px; }
-  .page.wait { padding-bottom: 104px; }
-  .cards, .wait .pick { grid-template-columns: 1fr; }
-  .card, .card.w { width: auto; }
-  .edit, .wait { flex-direction: column; align-items: stretch; }
-  .edit .left, .edit .right, .wait .panel { width: auto; height: auto; max-width: none; }
-  .edit .right { grid-template-columns: minmax(0, 1fr); }
-  .wait .pick, .wait .who { overflow: visible; }
-  .wait .pick { padding-right: 24px; }
-  .wait .who { padding-bottom: 12px; }
-  #wait .bar .lab { display: none; }
-  #wait .bar .url { flex: 1 1 0; }
-  .foot .ready, .foot .start { width: auto; padding: 0 20px; }
+  :root { --side: 16px; }
+  .cards { grid-template-columns: 1fr; }
+  .card { width: auto; }
+  /* 図A：プレビュー（高さ 240）→ タブの帯 → 選択肢 */
+  .mk { display: block; padding: calc(var(--bar-h) + 16px) var(--side) calc(var(--foot-h) + 24px); }
+  .mk > .pv { padding-top: 0; }
+  .mk > .pv .dot { --k: 8; }
+  .mk > .tabs, .mk > .tp { margin-left: 0; width: 100%; }
+  .mk > .tabs { margin-top: 16px; max-width: var(--tabs-w); }
+  .mk > .tp { min-height: 0; }
+  .tab { flex: 1 1 0; min-width: 0; padding: 0 4px; white-space: normal; line-height: 16px; display: flex; align-items: center; justify-content: center; }
+  .opts.wide .opt { width: 100%; }
+  .mk > .sv { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; margin: 0; width: auto; height: var(--foot-h); padding: 0 var(--side); background: var(--l-bg); border-top: 1px solid var(--l-line); display: flex; align-items: center; justify-content: center; }
+  .sv .save { max-width: 100%; height: 56px; line-height: 56px; }
+  /* 図C：部屋（高さ 320）→ 右のパネル。下のボタン3つは下に止まる行に横に並べる */
+  .bar .band { position: static; transform: none; flex: 1 1 0; min-width: 0; width: auto; height: 48px; font-size: 15px; line-height: 48px; }
+  .lobby { display: block; padding-bottom: calc(var(--foot-h) + 24px); }
+  .room { min-height: 320px; background: linear-gradient(var(--d-wall) 0 64px, var(--d-floor) 64px); }
+  .crew { padding-top: 72px; }
+  .side { margin-top: 24px; height: auto; }
+  .who { overflow: visible; }
+  .acts { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; margin: 0; height: var(--foot-h); padding: 0 var(--side); gap: 8px; background: var(--d-bg); border-top: 1px solid var(--d-wall); }
+  .acts .btn { flex: 1 1 0; min-width: 0; width: auto; height: 56px; padding: 0 12px; white-space: normal; font-size: 15px; line-height: 20px; }
+  .acts .start { font-size: 18px; }
+  /* 図D：画面いっぱい。プレビューを上、一覧を2列。パネルの中を縦に送る */
+  .ovl { padding: 0; align-items: stretch; }
+  .pkp { width: 100%; height: 100%; padding: 24px var(--side); border-radius: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+  .pkp .close { right: var(--side); }
+  .pkp > * { flex: none; }
+  .pkp .pv .dot { --k: 6; }
+  .pks { overflow: visible; grid-template-columns: repeat(2, var(--pk-item-w)); justify-content: center; }
+  .okr { padding-right: 0; }
+  .okr .ok { max-width: 100%; }
 }

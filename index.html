@@ -19,38 +19,54 @@
   <div class="bar"><button class="btn s o back">戻る</button><h2 class="ttl">キャラクター</h2><span class="st count"></span><span class="gap"></span><button class="btn s add">新規作成</button></div>
   <div class="page"><div class="cards"></div></div>
 </section>
-<!-- 図3 キャラクターの作成 -->
+<!-- 図A キャラクターの作成（設計図/見本-見た目の作り直し.html） -->
 <section id="edit" class="scr" hidden>
-  <div class="bar"><button class="btn s o back">戻る</button><h2 class="ttl">キャラクターの作成</h2><span class="gap"></span><button class="btn s save">保存</button></div>
-  <div class="page edit">
-    <div class="panel left">
-      <span class="face big"></span>
-      <div class="btns"><button class="btn s o pick">画像を選ぶ</button><button class="btn s o drop">外す</button></div>
-      <input class="file" type="file" accept="image/*" hidden>
-      <span class="lab">ゲームの中の見た目</span>
-      <canvas class="px dot" width="96" height="120"></canvas>
-    </div>
-    <div class="panel right">
+  <div class="bar"><button class="btn s o back">戻る</button><h2 class="ttl">キャラクターの作成</h2></div>
+  <div class="mk">
+    <div class="pv"><canvas class="px dot"></canvas><div class="pn"></div></div>
+    <div class="tabs" role="tablist"><button class="tab" type="button">名前・顔</button><button class="tab" type="button">見た目</button><button class="tab" type="button">体力・持ち物</button><button class="tab" type="button">特殊能力</button></div>
+    <div class="tp">
       <label class="fld"><span class="lab f-name"></span><input class="inp name" type="text"></label>
-      <label class="fld"><span class="lab">種類</span><select class="inp body"></select></label>
-      <div class="fld"><span class="lab">髪・毛の色</span><div class="sws hair"></div></div>
-      <div class="fld"><span class="lab">服の色</span><div class="sws shirt"></div></div>
-      <label class="fld"><span class="lab f-hp"></span><input class="inp hp" type="number"></label>
-      <label class="fld"><span class="lab f-carry"></span><input class="inp carry" type="number"></label>
-      <label class="fld"><span class="lab">特殊能力</span><select class="inp ability"></select></label>
-      <div class="fld"><span class="lab">能力の説明</span><div class="desc"></div></div>
+      <span class="lab">顔画像</span>
+      <div class="fc"><span class="face big"></span><button class="btn s o pick" type="button">画像を選ぶ</button><button class="btn s o drop" type="button">外す</button></div>
+      <input class="file" type="file" accept="image/*" hidden>
       <div class="err" role="alert"></div>
     </div>
+    <div class="tp" hidden>
+      <span class="lab">種類</span><div class="opts body"></div>
+      <span class="lab">髪・毛の色</span><div class="sws hair"></div>
+      <span class="lab">服の色</span><div class="sws shirt"></div>
+    </div>
+    <div class="tp two" hidden>
+      <label class="fld"><span class="lab f-hp"></span><input class="inp hp" type="number"></label>
+      <label class="fld"><span class="lab f-carry"></span><input class="inp carry" type="number"></label>
+    </div>
+    <div class="tp" hidden>
+      <span class="lab">特殊能力</span><div class="opts wide ability"></div>
+    </div>
+    <div class="sv"><button class="btn save" type="button">保存</button></div>
   </div>
 </section>
-<!-- 図4 待機の部屋 -->
+<!-- 図C 待機の部屋・図D キャラクターを選ぶ -->
 <section id="wait" class="scr" hidden>
-  <div class="bar"><button class="btn s o back">戻る</button><h2 class="ttl">待機の部屋</h2><span class="lab">招待の URL</span><input class="inp url" type="text" readonly><button class="btn s o copy">コピー</button></div>
-  <div class="page wait">
-    <div class="panel"><div class="nm head">キャラクターを選ぶ</div><div class="pick"></div></div>
-    <div class="panel"><div class="nm head count"></div><div class="who"></div></div>
+  <div class="bar"><button class="btn s o back">戻る</button><h2 class="ttl band count"></h2></div>
+  <div class="lobby">
+    <div class="room"><div class="crew"></div></div>
+    <div class="side">
+      <span class="lab">招待の URL</span><input class="inp url" type="text" readonly><button class="btn copy" type="button">コピー</button>
+      <span class="lab">参加者</span><div class="who"></div>
+    </div>
+    <div class="acts"><button class="btn change" type="button">キャラクター変更</button><button class="btn ready" type="button">準備完了</button><button class="btn start" type="button">始める</button></div>
+    <div class="st msg"></div>
   </div>
-  <div class="bar foot"><span class="st msg"></span><button class="btn o ready">準備完了</button><button class="btn start">始める</button></div>
+  <div class="ovl" hidden>
+    <div class="pkp" role="dialog" aria-label="キャラクターを選ぶ">
+      <h2 class="ttl">キャラクターを選ぶ</h2><button class="x close" type="button" aria-label="閉じる">×</button>
+      <div class="pv"><canvas class="px dot"></canvas><div class="pn"></div><div class="ps"></div></div>
+      <div class="pks"></div>
+      <div class="okr"><button class="btn ok" type="button">決定</button></div>
+    </div>
+  </div>
 </section>
 <canvas id="game"></canvas>
 <script src="data/data.js"></script>

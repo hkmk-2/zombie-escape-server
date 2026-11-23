@@ -28,11 +28,18 @@
     var sp = S.sprites[name];
     if (!sp || seen.indexOf(name) >= 0) throw new Error('絵が無いか from が輪になっている: ' + name);
     if (Array.isArray(sp)) return sp.slice();
+    if (sp.dots) return sp.dots.slice();
     var rows = resolve(S, sp.from, seen.concat(name));
     if (sp.swap) rows = rows.map(function (r) { return r.split('').map(function (c) { return sp.swap[c] || c; }).join(''); });
     for (var i in sp.rows || {}) rows[+i] = sp.rows[i];
     if (sp.flipX) rows = rows.map(function (r) { return r.split('').reverse().join(''); });
     return rows;
+  }
+
+  // 1ドットを画面の何 px で描くか。無ければ from の元、それも無ければ scale（tools/preview_sprites.py と同じ）
+  function pxOf(S, name) {
+    var sp = S.sprites[name];
+    return sp && sp.px ? sp.px : sp && sp.from ? pxOf(S, sp.from) : S.scale;
   }
 
   // 読みこみの時に1回だけ、全部の絵を小さいキャンバスにし、「名前.数字」の種類の数を数える
@@ -42,6 +49,7 @@
     Object.keys(S.sprites).forEach(function (name) {
       rows[name] = resolve(S, name, []);
       img[name] = paint(rows[name], S.palette, null);
+      img[name].px = pxOf(S, name); // 描く時の倍率。見た目ごとの絵（lookImg）にも同じ値を付ける
       var m = /^(.*)\.(\d+)$/.exec(name);
       if (m) n[m[1]] = Math.max(n[m[1]] || 0, +m[2] + 1);
     });
@@ -79,7 +87,9 @@
     var over = {}, k;
     for (k in (hair && hair.colors) || {}) over[k] = hair.colors[k];
     for (k in (shirt && shirt.colors) || {}) over[k] = shirt.colors[k];
-    return (A.looks[key] = paint(A.rows[name], A.pal, over));
+    im = A.looks[key] = paint(A.rows[name], A.pal, over);
+    im.px = A.img[name].px;
+    return im;
   }
 
   function img(name) { var c = SP.img[name]; if (!c && missing.indexOf(name) < 0) missing.push(name); return c; }
@@ -287,9 +297,9 @@
     return out;
   }
 
-  // キャラクターを n 番目に入れる。足もとの中央を画面の px の整数に置く（自分は画面の中央から動かない）
+  // キャラクターを n 番目に入れる。足もとの中央を画面の px の整数に置く（自分は画面の中央から動かない）。絵は絵ごとの px 倍、影は場面の k 倍
   function chr(kind, e, n) {
-    var im = charSprite(kind, e, V.t, V.frameSec, kind === 'player'), b = blend(e, cur), o = slot(n), k = V.k;
+    var im = charSprite(kind, e, V.t, V.frameSec, kind === 'player'), b = blend(e, cur), o = slot(n), k = im.px || V.k;
     var fx0 = Math.round(b.x * V.ppm) - V.camX, fy = Math.round(b.y * V.ppm) + Math.round((e.r || 0) * V.ppm) - V.camY;
     o.im = blink(e.hurtT) ? null : im; o.sx = fx0 - Math.floor(im.width / 2) * k; o.sy = fy - im.height * k; o.w = im.width * k; o.h = im.height * k;
     o.foot = (b.y + (e.r || 0)) * V.art; o.shadow = true; o.fx = fx0; o.fy = fy;
@@ -302,7 +312,7 @@
       ctx.fillStyle = 'rgba(0,0,0,.35)';
       ctx.fillRect(o.fx - 4 * k, o.fy - 2 * k, 8 * k, k); ctx.fillRect(o.fx - 6 * k, o.fy - k, 12 * k, 2 * k); ctx.fillRect(o.fx - 4 * k, o.fy + k, 8 * k, k);
     }
-    if (o.im) ctx.drawImage(o.im, o.sx, o.sy, o.im.width * k, o.im.height * k);
+    if (o.im) ctx.drawImage(o.im, o.sx, o.sy, o.w, o.h);
   }
 
   function drawPlay(ctx, game, dt, alpha, prev, meId) {
@@ -379,7 +389,7 @@
       if (o2 === me || o2.floor !== me.floor || !o2.alive || o2.escaped || !o2.name) continue;
       blend(o2, cur);
       var nt = textImg('name', o2.name, C, s), head = lookImg(o2, 'down', 0);
-      var nx = Math.round(cur.x * ppm) - camX, ny = Math.round(cur.y * ppm) + Math.round((o2.r || 0) * ppm) - camY - (head ? head.height : 0) * k;
+      var nx = Math.round(cur.x * ppm) - camX, ny = Math.round(cur.y * ppm) + Math.round((o2.r || 0) * ppm) - camY - (head ? head.height * (head.px || k) : 0);
       ctx.drawImage(nt.c, nx - nt.w / 2, ny - 2 - nt.h, nt.w, nt.h);
     }
     // 当たった時の輪

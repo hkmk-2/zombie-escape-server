@@ -6,7 +6,7 @@
     needChar: '先にキャラクターを作ります', noRoom: 'この部屋はありません', full: 'この部屋は満員です', busy: 'この部屋はゲーム中です',
     closed: 'サーバーとの接続が切れました', nameReq: '名前を入れてください', notImage: '画像のファイルではありません', tooBig: '画像を小さくできませんでした',
     del: 'このキャラクターを消します', delYes: '消す', delNo: 'やめる', ready: '準備完了', unready: '準備を取り消す', host: 'ホスト', picking: '選択中',
-    noChar: 'キャラクター未選択', count: '{n}人', members: '参加者　{n} / {max}（仮）', wait: '全員が準備完了になると、ホストが始められます（今は {r} / {n}）'
+    count: '{n}人', members: '待機の部屋　{n} / {max}（仮）', wait: '全員が準備完了になると、ホストが始められます（今は {r} / {n}）'
   };
   function f(s, v) { return s.replace(/\{(\w+)\}/g, function (_, k) { return v[k]; }); }
   function $(id) { return document.getElementById(id); }
@@ -18,17 +18,21 @@
   function show(name) {
     cur = name;
     document.body.classList.remove('play');
+    document.body.classList.toggle('dark', name === 'wait'); // 待機の部屋だけ暗い色
     screens.forEach(function (s) { $(s).hidden = s !== name; });
+    O.hidden = true;
     window.scrollTo(0, 0);
     ({ top: drawTop, list: drawList, edit: drawEdit, wait: drawWait })[name]();
+    if (name === 'wait' && room && !pickedChar()) openPick(); // 入った時にキャラクターが未選択なら図Dを開く
   }
-  function hideAll() { screens.forEach(function (s) { $(s).hidden = true; }); document.body.classList.add('play'); }
+  function hideAll() { screens.forEach(function (s) { $(s).hidden = true; }); document.body.classList.remove('dark'); document.body.classList.add('play'); }
 
-  // ドット絵の見本（プレイと同じ絵・下向きの立ち）。CSS で 3倍・6倍に出す
+  // ドット絵の見本（プレイと同じ絵・下向きの立ち）。大きさは絵のドット数 --w --h × CSS の倍率 --k
   function dot(c, canvas) {
     var im = Render.lookImg(c, 'down', 0);
     canvas = canvas || el('canvas', 'px dot');
     canvas.width = im.width; canvas.height = im.height;
+    canvas.style.setProperty('--w', im.width); canvas.style.setProperty('--h', im.height);
     var x = canvas.getContext('2d'); x.clearRect(0, 0, im.width, im.height); x.drawImage(im, 0, 0);
     return canvas;
   }
@@ -47,9 +51,9 @@
   function stats(c) { return '体力 ' + c.hp + '　持てる量 ' + c.carry + '　' + (find(CH.bodies, c.body) || CH.bodies[0]).name; }
   function badge(text, cls) { return el('span', 'bdg' + (cls ? ' ' + cls : ''), text); }
 
-  // キャラクターのカード（一覧と待機の部屋で使い回す）
-  function card(c, wide) {
-    var e = el('div', 'card' + (wide ? '' : ' w')), a = ability(c);
+  // キャラクターのカード（図B）
+  function card(c) {
+    var e = el('div', 'card'), a = ability(c);
     e.tabIndex = 0;
     e.appendChild(face(c));
     e.appendChild(el('span', 'nm', c.name));
@@ -74,7 +78,7 @@
     q($('list'), '.count').textContent = f(T.count, { n: list.length });
     box.textContent = '';
     list.forEach(function (c) {
-      var e = card(c, true), x = el('button', 'x', '×');
+      var e = card(c), x = el('button', 'x', '×');
       x.setAttribute('aria-label', T.delYes);
       e.appendChild(x); e.appendChild(dot(c));
       e.onclick = function () { editing = c; show('edit'); };
@@ -95,11 +99,25 @@
   q($('list'), '.back').onclick = function () { show('top'); };
   q($('list'), '.add').onclick = function () { editing = null; show('edit'); };
 
-  // ---- 図3 キャラクターの作成 ----
+  // ---- 図A キャラクターの作成 ----
   var editing = null, draft = null, E = $('edit');
-  function opts(sel, list) {
-    sel.textContent = '';
-    list.forEach(function (o) { var e = el('option', null, o.name); e.value = o.id; sel.appendChild(e); });
+  var tabs = E.querySelectorAll('.tab'), panes = E.querySelectorAll('.tp');
+  function tab(i) {
+    Array.prototype.forEach.call(tabs, function (t, j) { t.classList.toggle('on', i === j); t.setAttribute('aria-selected', i === j); });
+    Array.prototype.forEach.call(panes, function (p, j) { p.hidden = i !== j; });
+  }
+  Array.prototype.forEach.call(tabs, function (t, i) { t.setAttribute('role', 'tab'); t.onclick = function () { tab(i); }; });
+  // 選択肢の枠（種類・特殊能力）。押して選ぶ。説明がある物は名前の下に出す
+  function choices(box, list, key) {
+    box.textContent = '';
+    list.forEach(function (o) {
+      var on = draft[key] === o.id, b = el('button', 'opt' + (on ? ' on' : ''));
+      b.type = 'button'; b.setAttribute('aria-pressed', on);
+      b.appendChild(el('span', 'nm', o.name));
+      if (o.desc) b.appendChild(el('span', 'st', o.desc));
+      b.onclick = function () { draft[key] = o.id; fix(); };
+      box.appendChild(b);
+    });
   }
   function swatches(box, list, key) {
     box.textContent = '';
@@ -119,32 +137,29 @@
     dogs.map(function (b) { return '。' + b.name + 'は ' + b.carryMax + ' まで'; }).join('') + '）';
   q(E, '.name').maxLength = CH.nameMaxLen;
   range(q(E, '.hp'), CH.hp); range(q(E, '.carry'), CH.carry);
-  opts(q(E, '.body'), CH.bodies); opts(q(E, '.ability'), config.abilities);
 
   function drawEdit() {
     draft = Chars.clean(config, editing || { name: '', hp: CH.hp.default, carry: CH.carry.default });
     q(E, '.name').value = draft.name;
     q(E, '.hp').value = draft.hp; q(E, '.carry').value = draft.carry;
     q(E, '.err').textContent = '';
+    tab(0);
     refresh();
   }
   // 入力を範囲に切って画面に戻す（名前はそのまま。空の時は保存で止める）
   function refresh() {
     var name = q(E, '.name').value;
-    draft.body = q(E, '.body').value || draft.body;
-    draft.ability = q(E, '.ability').value || draft.ability;
     var c = Chars.clean(config, { id: draft.id, name: 'x', body: draft.body, hair: draft.hair, shirt: draft.shirt, face: draft.face, hp: q(E, '.hp').value, carry: q(E, '.carry').value, ability: draft.ability });
     c.name = name; draft = c;
-    q(E, '.body').value = c.body; q(E, '.ability').value = c.ability;
+    choices(q(E, '.opts.body'), CH.bodies, 'body'); choices(q(E, '.opts.ability'), config.abilities, 'ability');
     swatches(q(E, '.hair'), CH.looks.hair, 'hair'); swatches(q(E, '.shirt'), CH.looks.shirt, 'shirt');
-    q(E, '.desc').textContent = ability(c).desc;
-    face(c, q(E, '.face')); dot(c, q(E, '.dot'));
+    face(c, q(E, '.face')); dot(c, q(E, '.pv .dot'));
+    q(E, '.pn').textContent = name.trim();
     q(E, '.drop').disabled = !c.face;
   }
   function fix() { refresh(); q(E, '.hp').value = draft.hp; q(E, '.carry').value = draft.carry; }
-  q(E, '.body').onchange = fix; q(E, '.ability').onchange = refresh;
   q(E, '.hp').onchange = fix; q(E, '.carry').onchange = fix;
-  q(E, '.name').oninput = function () { q(E, '.err').textContent = ''; };
+  q(E, '.name').oninput = function () { q(E, '.err').textContent = ''; q(E, '.pn').textContent = this.value.trim(); };
   q(E, '.pick').onclick = function () { q(E, '.file').click(); };
   q(E, '.drop').onclick = function () { draft.face = null; refresh(); };
   q(E, '.file').onchange = function () {
@@ -157,7 +172,7 @@
   q(E, '.save').onclick = function () {
     fix();
     var c = Chars.put(store, config, draft);
-    if (!c) { q(E, '.err').textContent = T.nameReq; q(E, '.name').focus(); return; }
+    if (!c) { tab(0); q(E, '.err').textContent = T.nameReq; q(E, '.name').focus(); return; } // 名前のタブへ移して案内を出す
     show('list');
   };
 
@@ -209,31 +224,25 @@
 
   function drawWait() {
     if (!room) return;
-    var list = Chars.load(store, config), me = mine(), box = q(W, '.pick');
+    var list = Chars.load(store, config), me = mine();
     if (picked && !find(list, picked)) picked = null;
     q(W, '.url').value = room.id ? Net.inviteUrl(room.id) : '';
     q(W, '.copy').disabled = !room.id;
-    box.textContent = '';
-    list.forEach(function (c) {
-      var e = card(c, false);
-      if (c.id === picked) e.classList.add('on');
-      e.onclick = function () { choose(c); };
-      e.onkeydown = function (ev) { if (ev.key === 'Enter') choose(c); };
-      box.appendChild(e);
-    });
-    var who = q(W, '.who'), ready = 0, all = room.players.length;
-    who.textContent = '';
+    // 部屋の中に全員の絵（頭の上に名前とバッジ）、右のパネルに参加者の行（ホストのバッジ）
+    var crew = q(W, '.crew'), who = q(W, '.who'), ready = 0, all = room.players.length;
+    crew.textContent = ''; who.textContent = '';
     q(W, '.count').textContent = f(T.members, { n: all, max: config.net.maxPlayers });
     room.players.forEach(function (p) {
-      var c = p.char, r = el('div', 'rowp'), bs = el('div', 'bdgs');
+      var c = p.char, name = c ? c.name : p.name, fg = el('div', 'fig'), r = el('div', 'rowp');
       if (p.ready) ready++;
-      var fc = c && (p.id === room.you ? c : Object.assign({}, c, { face: faces[p.id] || null }));
-      r.appendChild(face(fc));
-      r.appendChild(el('span', 'nm', c ? c.name : p.name));
-      r.appendChild(el('span', 'st', c ? ability(c).name + '・体力 ' + c.hp : T.noChar));
-      if (p.id === room.host) bs.appendChild(badge(T.host, 'y'));
-      bs.appendChild(p.ready ? badge(T.ready) : badge(T.picking, 'g'));
-      r.appendChild(bs);
+      fg.appendChild(p.ready ? badge(T.ready, 'r') : badge(T.picking, 'g'));
+      fg.appendChild(el('div', 'nm', name));
+      var d = dot(c); // 未選択の人は最初の見た目をうすく出す
+      if (!c) d.classList.add('none');
+      fg.appendChild(d);
+      crew.appendChild(fg);
+      r.appendChild(el('span', 'nm', name));
+      if (p.id === room.host) r.appendChild(badge(T.host));
       who.appendChild(r);
     });
     q(W, '.msg').textContent = msg || f(T.wait, { r: ready, n: all });
@@ -268,6 +277,35 @@
     else u.select();
   };
   q(W, '.back').onclick = leave;
+
+  // ---- 図D キャラクターを選ぶ（待機の部屋の上に重ねる）。「決定」で今と同じ char を送る ----
+  var O = q(W, '.ovl'), sel = null;
+  function openPick() { sel = picked; O.hidden = false; drawPick(); q(O, '.ok').focus(); }
+  function drawPick() {
+    var list = Chars.load(store, config), box = q(O, '.pks');
+    if (!find(list, sel)) sel = list[0] ? list[0].id : null;
+    box.textContent = '';
+    list.forEach(function (c) {
+      var e = el('button', 'pk');
+      e.type = 'button'; e.dataset.id = c.id;
+      e.appendChild(face(c)); e.appendChild(el('span', 'nm', c.name));
+      e.onclick = function () { sel = c.id; mark(); };
+      box.appendChild(e);
+    });
+    mark();
+  }
+  function mark() {
+    var c = find(Chars.load(store, config), sel);
+    Array.prototype.forEach.call(q(O, '.pks').children, function (e) { var on = e.dataset.id === sel; e.classList.toggle('on', on); e.setAttribute('aria-pressed', on); });
+    q(O, '.ok').disabled = !c;
+    if (!c) return;
+    dot(c, q(O, '.pv .dot'));
+    q(O, '.pn').textContent = c.name;
+    q(O, '.ps').textContent = '体力 ' + c.hp + '　持てる量 ' + c.carry + '　' + ability(c).name;
+  }
+  q(O, '.ok').onclick = function () { var c = find(Chars.load(store, config), sel); if (!c) return; O.hidden = true; choose(c); };
+  q(O, '.close').onclick = function () { O.hidden = true; };
+  q(W, '.change').onclick = openPick;
 
   window.Screens = { show: show, hideAll: hideAll };
   show('top');
